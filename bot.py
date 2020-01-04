@@ -11,10 +11,28 @@ logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s
 # /start
 # register user into system, reply with a thumbs up
 def start_f(u, c):
-	logging.info("User {} ({}) requested /start".format(u.effective_user.id, u.effective_user.first_name))
+	uid = u.effective_user.id
+	logging.info("User {} ({}) requested /start".format(uid, u.effective_user.first_name))
 	db.add_user(u.effective_user)
 	bot.send_message(chat_id=u.message.chat.id, text=strings.thumbs)
-	logging.info("User {} ({}) /start operation completed".format(u.effective_user.id, u.effective_user.first_name))
+	logging.info("User {} ({}) /start operation completed".format(uid, u.effective_user.first_name))
+
+	# If there is any active attendance, immediately send to user
+	# also update db and spreadsheet
+	attendances = db.get_attendances()
+	if len(attendances) == 0: return
+
+	logging.info("Adding user {} ({}) to existing attendance calls".format(uid, u.effective_user.first_name))
+	recipients = [(uid, {"name": u.effective_user.first_name})]
+	for att_id, att in attendances.items():
+		db.update_response(att_id, uid, {"attending": None, "m_id": None, "note": None})
+		message = att["message"]
+		deadline = att["deadline"] \
+			.astimezone(timezone(timedelta(hours=8))) \
+			.strftime(strings.disp_format)
+		job_queue.run_once(mail_to, 0.1, (att_id, recipients, message, deadline))
+		ss.add_user(att["deadline"], u.effective_user.first_name)
+	logging.info("User {} ({}) added to all existing attendance calls".format(uid, u.effective_user.first_name))
 
 
 # /call_attendance
@@ -501,7 +519,9 @@ def send_reminder(context:telegram.ext.CallbackContext):
 	for uid in to_notify:
 		name = users[uid]["name"]
 		m_id = responses[uid]["m_id"]
-		bot.send_message(chat_id=uid, text=strings.reminder_call(name), reply_to_message_id=m_id)
+		# only remind if user has been sent the attendance call
+		if m_id:
+			bot.send_message(chat_id=uid, text=strings.reminder_call(name), reply_to_message_id=m_id)
 	if r:
 		# remove reminder from database
 		# if r is 0, this is an on-resume call, and reminder is removed by the on-resume

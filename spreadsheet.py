@@ -47,3 +47,10 @@ class Spreadsheet:
 		worksheet.update_cell(cell.row, 2, str(attending))
 		worksheet.update_cell(cell.row, 3, note)
 
+	def add_user(self, deadline, name):
+		self.gc.login()
+		deadline = deadline \
+			.astimezone(timezone(timedelta(hours=8))) \
+			.strftime(strings.disp_format_verbose)
+		worksheet = self.sh.worksheet(deadline)
+		worksheet.append_row([name])
