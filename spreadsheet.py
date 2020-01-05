@@ -29,9 +29,11 @@ class Spreadsheet:
 		worksheet.update_acell("B1", title)
 		worksheet.update_acell("A2", "Deadline:")
 		worksheet.update_acell("B2", deadline)
-		worksheet.update_acell("A4", "-Name-")
-		worksheet.update_acell("B4", "-Attending-")
-		worksheet.update_acell("C4", "-Note-")
+		worksheet.update_acell("A4", "Name")
+		worksheet.update_acell("B4", "Attending")
+		worksheet.update_acell("C4", "Note")
+		worksheet.update_acell("C1", '="In: " & COUNTIF(B5:B, "TRUE")')
+		worksheet.update_acell("C2", '="Out: " & COUNTIF(B5:B, "FALSE")')
 		index = 5
 		for user in users:
 			worksheet.update_cell(index, 1, user)

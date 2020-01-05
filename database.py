@@ -2,6 +2,7 @@ import firebase_admin, strings
 from firebase_admin import credentials, firestore
 from datetime import datetime, timedelta, timezone
 
+
 class Database:
 	def __init__(self, cred="db_credentials"):
 		firebase_admin.initialize_app(credentials.Certificate(cred))
@@ -154,6 +155,12 @@ class Database:
 
 	def get_name(self, uid):
 		return self.get_user(uid)["name"]
+
+	def get_archive(self):
+		return {doc.id:doc.to_dict() for doc in self.db.collection("archive").stream()}
+
+	def get_archive_responses(self, att_id):
+		return self.archive_ref(att_id).collection("responses").document("responses").get().to_dict()
 
 	def write_cache(self, uid, data):
 		self.cache_ref(uid).set(data)

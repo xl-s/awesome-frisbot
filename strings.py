@@ -1,3 +1,5 @@
+from platform import system
+
 thumbs = "👍"
 invalid = "Sorry, this command is not available."
 another_attendance = "You are currently adding another attendance. Please complete or cancel that attendance call first."
@@ -15,11 +17,17 @@ no_deadline = "Please specify a deadline for this attendance."
 too_early = "Deadline and reminders cannot be in the past!"
 ask_reason = "Please specify a reason. For example, /out im dying"
 parse_format = "%d %b %Y %I:%M %p %z"
-disp_format = "%a %-d %b %-I:%M %p"
-disp_format_verbose = "%a %-d %b %Y %-I:%M %p"
+if system() == "Windows":
+	disp_format = "%a %#d %b %#I:%M %p"
+	disp_format_verbose = "%a %#d %b %Y %#I:%M %p"
+else:
+	disp_format = "%a %-d %b %-I:%M %p"
+	disp_format_verbose = "%a %-d %b %Y %-I:%M %p"
+
 need_info = "Please set a title and deadline."
 attendance_sent = "Sending poll..."
 no_attendance_call = "There are currently no active attendance polls."
+no_attendance_call_view = "There are currently no active attendance polls. If you would like to see the results of previous polls, use /archive."
 multiple_prefix = "Oops, it looks like there is more than one ongoing poll. I'll need you to specify which one you'd like to reply to.\n\n"
 multiple_suffix = "\nFor example, to reply to the second one, use /in 2 or /out 2 <reason>"
 suffix_attendance_instruction = "\nReply with /in or /out <reason>."
