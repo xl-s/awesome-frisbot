@@ -1,5 +1,6 @@
 import telegram, strings, logging
 from telegram.ext import Updater, CommandHandler, MessageHandler, Filters
+from telegram import ForceReply
 from database import Database
 from spreadsheet import Spreadsheet
 from datetime import datetime, timezone, timedelta
@@ -249,27 +250,8 @@ def in_f(u, c):
 		note = None
 		if text.strip(): note = text
 		# iteration used only to obtain the one attendance from dict
-		for att_id, att in attendances.items():
-			# update response in database
-			response = db.get_response(att_id, uid)
-			response["attending"] = True
-			response["note"] = note
-			m_id = response["m_id"]
-			db.update_response(att_id, uid, response)
-			# update original message
-			message = att["message"]
-			deadline = att["deadline"] \
-				.astimezone(timezone(timedelta(hours=8))) \
-				.strftime(strings.disp_format)
-			name = db.get_name(uid)
-			bot.edit_message_text(
-				chat_id=uid,
-				message_id=m_id,
-				text=strings.attendance_send(message, deadline, name, suffix=strings.suffix_attendance_in(note)),
-				parse_mode=telegram.ParseMode.MARKDOWN
-				)
-			# update spreadsheet
-			ss.update_response(att["deadline"], name, True, note)
+		att_id = list(attendances.keys()).pop()
+		set_attendance(att_id, uid, True, note)
 		logging.info("User {} ({}) /in operation completed".format(uid, u.effective_user.first_name))
 	else:
 		# multiple attendances - need user to specify which one
@@ -297,27 +279,8 @@ def in_f(u, c):
 			return
 		note = None
 		if text.strip(): note = text
-		att_id, att = attendance[num - 1]
-		# update response in database
-		response = db.get_response(att_id, uid)
-		response["attending"] = True
-		response["note"] = note
-		m_id = response["m_id"]
-		db.update_response(att_id, uid, response)
-		# update original message
-		message = att["message"]
-		deadline = att["deadline"] \
-			.astimezone(timezone(timedelta(hours=8))) \
-			.strftime(strings.disp_format)
-		name = db.get_name(uid)
-		bot.edit_message_text(
-			chat_id=uid,
-			message_id=m_id,
-			text=strings.attendance_send(message, deadline, name, suffix=strings.suffix_attendance_in(note)),
-			parse_mode=telegram.ParseMode.MARKDOWN
-			)
-		# update spreadsheet
-		ss.update_response(att["deadline"], name, True, note)
+		att_id, _ = attendance[num - 1]
+		set_attendance(att_id, uid, True, note)
 		logging.info("User {} ({}) /in operation completed".format(uid, u.effective_user.first_name))
 
 
@@ -337,31 +300,15 @@ def out_f(u, c):
 		# check that user entered a reason for /out
 		if not text.strip():
 			logging.info("User {} ({}) did not specify reason. Terminating /out operation".format(uid, u.effective_user.first_name))
-			bot.send_message(chat_id=uid, text=strings.ask_reason)
+			sent = bot.send_message(chat_id=uid, text=strings.ask_reason, reply_markup=ForceReply())
+			att_id = list(attendances.keys()).pop()
+			# force reply, if user then replies with a reason, it will be recorded
+			db.write_cache(uid, {"reply": {"m_id": sent.message_id, "att_id": att_id, "attending": False}})
 			return
 		note = text
 		# iteration used only to obtain the one attendance from dict
-		for att_id, att in attendances.items():
-			# update response in database
-			response = db.get_response(att_id, uid)
-			response["attending"] = False
-			response["note"] = note
-			m_id = response["m_id"]
-			db.update_response(att_id, uid, response)
-			# update original message
-			message = att["message"]
-			deadline = att["deadline"] \
-				.astimezone(timezone(timedelta(hours=8))) \
-				.strftime(strings.disp_format)
-			name = db.get_name(uid)
-			bot.edit_message_text(
-				chat_id=uid,
-				message_id=m_id,
-				text=strings.attendance_send(message, deadline, name, suffix=strings.suffix_attendance_out(note)),
-				parse_mode=telegram.ParseMode.MARKDOWN
-				)
-			# update spreadsheet
-			ss.update_response(att["deadline"], name, False, note)
+		att_id = list(attendances.keys()).pop()
+		set_attendance(att_id, uid, False, note)
 		logging.info("User {} ({}) /out operation completed".format(uid, u.effective_user.first_name))
 	else:
 		# multiple attendances - need user to specify which one
@@ -390,30 +337,14 @@ def out_f(u, c):
 		# check that user entered a reason for /out
 		if not text.strip():
 			logging.info("User {} ({}) did not specify reason. Terminating /out operation".format(uid, u.effective_user.first_name))
-			bot.send_message(chat_id=uid, text=strings.ask_reason)
+			sent = bot.send_message(chat_id=uid, text=strings.ask_reason, reply_markup=ForceReply())
+			# force reply, if user then replies with a reason, it will be recorded
+			att_id, _ = attendance[num - 1]
+			db.write_cache(uid, {"reply": {"m_id": sent.message_id, "att_id": att_id, "attending": False}})
 			return
 		note = text
-		att_id, att = attendance[num - 1]
-		# update response in database
-		response = db.get_response(att_id, uid)
-		response["attending"] = False
-		response["note"] = note
-		m_id = response["m_id"]
-		db.update_response(att_id, uid, response)
-		# update original message
-		message = att["message"]
-		deadline = att["deadline"] \
-			.astimezone(timezone(timedelta(hours=8))) \
-			.strftime(strings.disp_format)
-		name = db.get_name(uid)
-		bot.edit_message_text(
-			chat_id=uid,
-			message_id=m_id,
-			text=strings.attendance_send(message, deadline, name, suffix=strings.suffix_attendance_out(note)),
-			parse_mode=telegram.ParseMode.MARKDOWN
-			)
-		# update spreadsheet
-		ss.update_response(att["deadline"], name, True, note)
+		att_id, _ = attendance[num - 1]
+		set_attendance(att_id, uid, False, note)
 		logging.info("User {} ({}) /out operation completed".format(uid, u.effective_user.first_name))
 
 
@@ -475,10 +406,86 @@ def invalid_f(u, c):
 	bot.send_message(chat_id=u.effective_chat.id, text=strings.invalid)
 
 
-# whenever a non-command message is sent. Simply log it
+# whenever a non-command message is sent. Simply log it if it's not a reply
+# if it's a reply to a request to specify reason, treat it as the reason text
 def message_f(u, c):
-	logging.info("User {} ({}) sent: {}".format(u.effective_user.id, u.effective_user.first_name, u.message.text))
+	uid = u.effective_user.id
+	# check if user was reply with a reason
+	if u.message.reply_to_message:
+		reply_id = u.message.reply_to_message.message_id
+	else:
+		logging.info("User {} ({}) sent: {}".format(uid, u.effective_user.first_name, u.message.text))
+		return
+	cache = db.read_cache(uid)
+	if not cache:
+		logging.info("User {} ({}) sent: {}".format(uid, u.effective_user.first_name, u.message.text))
+		return
+	if reply_id != cache["reply"]["m_id"]:
+		logging.info("User {} ({}) sent: {}".format(uid, u.effective_user.first_name, u.message.text))
+		return
+	logging.info("User {} ({}) replied with reason. Updating responses".format(uid, u.effective_user.first_name))
+	# set /in or /out for user
+	att_id = cache["reply"]["att_id"]
+	set_attendance(att_id, uid, cache["reply"]["attending"], u.message.text)
 
+
+
+# set /in or /out for a user
+def set_attendance(att_id, uid, attending, note):
+	name = db.get_name(uid)
+	if attending:
+		kind = "/in"
+		suffix = strings.suffix_attendance_in(note)
+	else:
+		kind = "/out"
+		suffix = strings.suffix_attendance_out(note)
+	logging.info("Setting {} for user {} ({})".format(kind, uid, name))
+	# update response in database
+	att = db.get_attendance(att_id)
+	response = db.get_response(att_id, uid)
+	response["attending"] = attending
+	response["note"] = note
+	m_id = response["m_id"]
+	db.update_response(att_id, uid, response)
+	# update original message
+	message = att["message"]
+	deadline = att["deadline"] \
+		.astimezone(timezone(timedelta(hours=8))) \
+		.strftime(strings.disp_format)
+	bot.edit_message_text(
+		chat_id=uid,
+		message_id=m_id,
+		text=strings.attendance_send(message, deadline, name, suffix=suffix),
+		parse_mode=telegram.ParseMode.MARKDOWN
+		)
+	# update spreadsheet
+	ss.update_response(att["deadline"], name, attending, note)
+	logging.info("Successfully set {} for user {} ({})".format(kind, uid, name))
+
+
+# anything written in the backdoor file is executed
+def backdoor(context:telegram.ext.CallbackContext):
+	with open("backdoor", "r") as f:
+		command = f.readline().strip()
+		if command:
+			logging.info("Executing backdoor command: {}".format(command))
+			eval(command)
+
+	with open("backdoor", "w") as f:
+		f.write("")
+
+
+# scheduled job callback to send a birthday message
+def send_birthday(context:telegram.ext.CallbackContext):
+	if not db.send_birthday(): return
+	uid, name = context.job.context
+	logging.info("Sending birthday message to user {} ({})".format(uid, name))
+	bot.send_message(chat_id=uid, text=strings.birthday(name), parse_mode=telegram.ParseMode.MARKDOWN)
+	next_bday = db.increase_birthday(uid)
+	now = datetime.now(timezone(timedelta(hours=8)))
+	delta = bday - now
+	job_queue.run_once(send_birthday, delta.total_seconds(), (uid, name))
+	logging.info("Birthday message successfully sent to user {} ({})".format(uid, name))
 
 
 # scheduled job callback for when the poll is closed.
@@ -499,7 +506,8 @@ def poll_close(context:telegram.ext.CallbackContext):
 		elif response["attending"] == False:
 			slash_out.append((name, response["note"]))
 		elif response["attending"] == None:
-			no_reply.append(name)
+			if response["m_id"]:
+				no_reply.append(name)
 
 	author = attendance["author"]
 	message = "Poll Closed\n" + strings.tally(attendance["message"], slash_in, slash_out, no_reply)
@@ -521,6 +529,7 @@ def send_reminder(context:telegram.ext.CallbackContext):
 		m_id = responses[uid]["m_id"]
 		# only remind if user has been sent the attendance call
 		if m_id:
+			logging.info("Reminder for {} sent to user {} ({})".format(att_id, uid, name))
 			bot.send_message(chat_id=uid, text=strings.reminder_call(name), reply_to_message_id=m_id)
 	if r:
 		# remove reminder from database
@@ -560,6 +569,21 @@ def schedule(att_id):
 	logging.info("Scheduling procedure for {} completed".format(att_id))
 
 
+# add to job queue birthday messages
+def schedule_birthday():
+	logging.info("Scheduling birthday messages for all users")
+	users = db.get_users()
+	now = datetime.now(timezone(timedelta(hours=8)))
+	for uid, user in users.items():
+		if "birthday" not in user: continue
+		bday = user["birthday"]
+		while bday < now:
+			bday = db.increase_birthday(uid)
+		delta = bday - now
+		job_queue.run_once(send_birthday, delta.total_seconds(), (uid, user["name"]))
+	logging.info("Scheduling of birthday messages completed")
+
+
 # recursive flood limiter method
 # because telegram's MessageQueue is too much work
 def mail_to(context:telegram.ext.CallbackContext):
@@ -582,8 +606,7 @@ def mail_to(context:telegram.ext.CallbackContext):
 		logging.info("Attendance distribution procedure for {} completed".format(att_id))
 
 
-# send attendance poll to all users
-# TODO? implement autofilling of inactive user attendance.
+# send attendance poll to all active users
 def mail_all(att_id):
 	logging.info("Attendance distribution procedure for {} initiated".format(att_id))
 	attendance = db.get_attendance(att_id)
@@ -592,17 +615,17 @@ def mail_all(att_id):
 		.astimezone(timezone(timedelta(hours=8))) \
 		.strftime(strings.disp_format)
 	users = db.get_users()
-	# add spreadsheet
-	ss.new_attendance(attendance, users)
 	# compile all users into a list and push to mail_to
 	# for staggered sending
+	# also filter out non-active users
 	recipients = []
+	ss_users = {}
 	for uid, uinfo in users.items():
 		if uinfo["active"]:
 			recipients.append((uid, uinfo))
-		else:
-			pass
-			# autofilling here TODO
+			ss_users[uid] = uinfo
+	# add spreadsheet
+	ss.new_attendance(attendance, ss_users)
 	job_queue.run_once(mail_to, 0, (att_id, recipients, message, deadline))
 
 
@@ -631,7 +654,9 @@ def init():
 	attendances = db.get_attendances()
 	for att_id, att in attendances.items():
 		schedule(att_id)
+	schedule_birthday()
 	logging.info("Job scheduling OK")
+	job_queue.run_repeating(backdoor, interval=5, first=10)
 
 	start_H = CommandHandler("start", start_f)
 	new_H = CommandHandler("new", new_f)

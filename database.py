@@ -25,6 +25,9 @@ class Database:
 	def archive_ref(self, att_id):
 		return self.db.collection("archive").document("{}".format(att_id))
 
+	def cache_ref(self, uid):
+		return self.db.collection("cache").document("{}".format(uid))
+
 	def add_user(self, effective_user):
 		uid = effective_user.id
 		name = effective_user.first_name
@@ -152,6 +155,12 @@ class Database:
 	def get_name(self, uid):
 		return self.get_user(uid)["name"]
 
+	def write_cache(self, uid, data):
+		self.cache_ref(uid).set(data)
+
+	def read_cache(self, uid):
+		return self.cache_ref(uid).get().to_dict()
+
 	def close_attendance(self, att_id):
 		# add everything to archive: first all fields in doc then responses.
 		# upload to spreadsheet as well? or is realtime for that better
@@ -177,9 +186,19 @@ class Database:
 				text += "\t{}. {} hours before deadline\n".format(ind + 1, r)
 		return text
 
+	def increase_birthday(self, uid):
+		user = self.get_user(uid)
+		bday = user["birthday"]
+		bday.replace(year = bday.year + 1)
+		user["birthday"] = bday
+		self.user_ref(uid).set(user)
+
 	def is_admin(self, uid):
 		user = self.get_user(uid)
 		return user["admin"]
 
 	def is_creating(self, uid):
 		return True if self.newatt_ref(uid).get().to_dict() else False
+
+	def send_birthday(self):
+		return True if self.get_settings()["birthday"] else False

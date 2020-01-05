@@ -24,7 +24,9 @@ multiple_prefix = "Oops, it looks like there is more than one ongoing poll. I'll
 multiple_suffix = "\nFor example, to reply to the second one, use /in 2 or /out 2 <reason>"
 suffix_attendance_instruction = "\nReply with /in or /out <reason>."
 out_of_index = "Please specify a number which corresponds to one of the polls."
-terminated = "Bot session terminated."
+
+def birthday(name):
+	return "hpbd {}".format(name)
 
 def attendance_call(db, uid):
 	message, deadline, reminders = db.get_active_info(uid)
