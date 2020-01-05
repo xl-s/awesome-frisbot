@@ -577,6 +577,7 @@ def schedule_birthday():
 	for uid, user in users.items():
 		if "birthday" not in user: continue
 		bday = user["birthday"]
+		if not bday: continue
 		while bday < now:
 			bday = db.increase_birthday(uid)
 		delta = bday - now
@@ -654,7 +655,7 @@ def init():
 	attendances = db.get_attendances()
 	for att_id, att in attendances.items():
 		schedule(att_id)
-	schedule_birthday()
+	# schedule_birthday()
 	logging.info("Job scheduling OK")
 	job_queue.run_repeating(backdoor, interval=5, first=10)
 
