@@ -17,13 +17,6 @@ no_deadline = "Please specify a deadline for this attendance."
 too_early = "Deadline and reminders cannot be in the past!"
 ask_reason = "Please specify a reason. For example, /out im dying"
 parse_format = "%d %b %Y %I:%M %p %z"
-if system() == "Windows":
-	disp_format = "%a %#d %b %#I:%M %p"
-	disp_format_verbose = "%a %#d %b %Y %#I:%M %p"
-else:
-	disp_format = "%a %-d %b %-I:%M %p"
-	disp_format_verbose = "%a %-d %b %Y %-I:%M %p"
-
 need_info = "Please set a title and deadline."
 attendance_sent = "Sending poll..."
 no_attendance_call = "There are currently no active attendance polls."
@@ -32,6 +25,14 @@ multiple_prefix = "Oops, it looks like there is more than one ongoing poll. I'll
 multiple_suffix = "\nFor example, to reply to the second one, use /in 2 or /out 2 <reason>"
 suffix_attendance_instruction = "\nReply with /in or /out <reason>."
 out_of_index = "Please specify a number which corresponds to one of the polls."
+only_three = "Only the three most recent polls have been shown. To see older polls, please contact your database administrator."
+
+if system() == "Windows":
+	disp_format = "%a %#d %b %#I:%M %p"
+	disp_format_verbose = "%a %#d %b %Y %#I:%M %p"
+else:
+	disp_format = "%a %-d %b %-I:%M %p"
+	disp_format_verbose = "%a %-d %b %Y %-I:%M %p"
 
 def birthday(name):
 	return "hpbd {}".format(name)

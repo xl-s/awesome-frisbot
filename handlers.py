@@ -428,6 +428,7 @@ def view_f(u, c):
 		slash_out = []
 		no_reply = []
 		for uid, response in responses.items():
+			if not response["m_id"]: continue
 			name = users[uid]["name"]
 			if response["attending"] == True:
 				slash_in.append((name, response["note"]))
@@ -469,7 +470,10 @@ def archive_f(u, c):
 		return
 	archive = db.get_archive()
 	archive = sorted(list(archive.items()), key=lambda x:x[1]["deadline"])
-	if len(archive) > 3: archive = archive[-3:]
+	suffix = ""
+	if len(archive) > 3: 
+		archive = archive[-3:]
+		suffix = strings.only_three
 	# build responses to attendance and send to requestor
 	users = db.get_users()
 	text = ""
@@ -490,7 +494,7 @@ def archive_f(u, c):
 			elif response["attending"] == None:
 				no_reply.append(name)
 		text += "*Date: {}*\n".format(deadline) + strings.tally(att["message"], slash_in, slash_out, no_reply) + "\n\n"
-
+	text += suffix
 	bot.send_message(chat_id=uid, text=text, parse_mode=telegram.ParseMode.MARKDOWN)
 	logging.info("User {} ({}) /archive operation completed".format(uid, u.effective_user.first_name))
 
