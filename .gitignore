@@ -1,0 +1,9 @@
+backdoor
+*.sublime-project
+*.sublime-workspace
+db_credentials
+gs_credentials
+local.py
+log.txt
+TOKEN
+__pycache__

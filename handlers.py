@@ -21,6 +21,8 @@ def set_attendance(att_id, uid, attending, note):
 	response["attending"] = attending
 	response["note"] = note
 	m_id = response["m_id"]
+	if not m_id:
+		logging.info("User {} ({}) is not currently enrolled in attendance {}. Terminating attendance set".format(uid, name, att_id))
 	db.update_response(att_id, uid, response)
 	# update original message
 	message = att["message"]
@@ -436,6 +438,9 @@ def view_f(u, c):
 				slash_out.append((name, response["note"]))
 			elif response["attending"] == None:
 				no_reply.append(name)
+			slash_in.sort(key=lambda x: x[0])
+			slash_out.sort(key=lambda x: x[0])
+			no_reply.sort()
 		text += strings.tally(att["message"], slash_in, slash_out, no_reply) + "\n\n"
 
 	bot.send_message(chat_id=cid, text=text, parse_mode=telegram.ParseMode.MARKDOWN)
