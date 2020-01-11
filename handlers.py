@@ -438,9 +438,9 @@ def view_f(u, c):
 				slash_out.append((name, response["note"]))
 			elif response["attending"] == None:
 				no_reply.append(name)
-			slash_in.sort(key=lambda x: x[0])
-			slash_out.sort(key=lambda x: x[0])
-			no_reply.sort()
+			slash_in.sort(key=lambda x: x[0].lower())
+			slash_out.sort(key=lambda x: x[0].lower())
+			no_reply.sort(key=lambda x: x.lower())
 		text += strings.tally(att["message"], slash_in, slash_out, no_reply) + "\n\n"
 
 	bot.send_message(chat_id=cid, text=text, parse_mode=telegram.ParseMode.MARKDOWN)

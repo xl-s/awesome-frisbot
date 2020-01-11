@@ -48,9 +48,9 @@ def poll_close(context:telegram.ext.CallbackContext):
 		elif response["attending"] == None:
 			if response["m_id"]:
 				no_reply.append(name)
-		slash_in.sort(key=lambda x: x[0])
-		slash_out.sort(key=lambda x: x[0])
-		no_reply.sort()
+		slash_in.sort(key=lambda x: x[0].lower())
+		slash_out.sort(key=lambda x: x[0].lower())
+		no_reply.sort(key=lambda x: x.lower())
 
 	author = attendance["author"]
 	message = "Poll Closed\n" + strings.tally(attendance["message"], slash_in, slash_out, no_reply)
