@@ -491,6 +491,7 @@ def archive_f(u, c):
 		slash_out = []
 		no_reply = []
 		for user, response in responses.items():
+			if not response["m_id"]: continue
 			name = users[user]["name"]
 			if response["attending"] == True:
 				slash_in.append((name, response["note"]))
