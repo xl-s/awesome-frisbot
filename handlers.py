@@ -61,6 +61,9 @@ def message_handler(filter):
 def start_f(u, c):
 	uid = u.effective_user.id
 	logging.info("User {} ({}) requested /start".format(uid, u.effective_user.first_name))
+	if db.get_user(uid):
+		logging.info("User {} ({}) is already registered. Terminating /start operation".format(uid, u.effective_user.first_name))
+		return
 	db.add_user(u.effective_user)
 	bot.send_message(chat_id=u.message.chat.id, text=strings.thumbs)
 	logging.info("User {} ({}) /start operation completed".format(uid, u.effective_user.first_name))
